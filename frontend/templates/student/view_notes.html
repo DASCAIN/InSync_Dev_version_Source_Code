@@ -9,12 +9,14 @@
 window.MathJax = {
   tex: {
     inlineMath: [['$', '$'], ['\\(', '\\)']],
-    displayMath: [['$$', '$$'], ['\\[', '\\]'], ['[', ']']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
     processEscapes: true
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
   }
 };
 </script>
-<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
 <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 <style>
   .prose {
@@ -52,12 +54,6 @@ window.MathJax = {
         <p class="text-xs text-muted-foreground">{{ note.topic.subject.name|default:"General Subject" }} — {{ note.topic.name }}</p>
       </div>
       <div class="w-auto flex justify-end">
-        {% if source_assignment %}
-        <a href="{% url 'voice_tutor:serve_assignment_pdf' source_assignment.code %}" target="_blank" class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary font-medium text-sm rounded-lg hover:bg-primary/20 transition-colors">
-          <i data-lucide="file-text" class="w-4 h-4"></i>
-          <span>View Source PDF</span>
-        </a>
-        {% endif %}
       </div>
     </div>
   </div>
@@ -77,7 +73,7 @@ window.MathJax = {
 {% block dashboard_scripts %}
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    const rawMarkdown = '{{ note.content|escapejs }}';
+    const rawMarkdown = '{{ note_content|escapejs }}';
     const htmlContent = marked.parse(rawMarkdown);
     document.getElementById('notes-content').innerHTML = htmlContent;
     

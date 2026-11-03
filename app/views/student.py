@@ -3,9 +3,6 @@ import logging
 from pathlib import Path
 import re
 
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -15,6 +12,7 @@ from app.services.generator import (
     generate_notes,
     generate_video_explanation,
 )
+from app.services.notes_pipeline import PIPELINE_VERSION
 from app.services.vector_store import get_all_topics, _sanitize_name
 from config import get_settings
 
@@ -37,6 +35,11 @@ def parse_and_run_infographic(content: str, output_path: Path) -> str:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         
         try:
+            import matplotlib
+            matplotlib.use('Agg')
+            import matplotlib.pyplot as plt
+            import numpy as np
+            
             # Clear previous plots
             plt.close('all')
             
@@ -44,7 +47,6 @@ def parse_and_run_infographic(content: str, output_path: Path) -> str:
             local_vars = {
                 "OUTPUT_PATH": str(output_path),
             }
-            import numpy as np
             global_vars = {
                 "plt": plt,
                 "np": np,
@@ -52,10 +54,13 @@ def parse_and_run_infographic(content: str, output_path: Path) -> str:
             }
             exec(script_content, global_vars, local_vars)
             logger.info("Successfully executed infographic script and saved to %s", output_path)
+        except ImportError:
+            logger.error("Matplotlib is not available. Skipping infographic generation.")
         except Exception as e:
             logger.error("Failed to run infographic script: %s", str(e), exc_info=True)
             # Ensure cleanup
             try:
+                import matplotlib.pyplot as plt
                 plt.close('all')
             except Exception:
                 pass
@@ -179,6 +184,16 @@ async def generate_content(request) -> JsonResponse:
                 try:
                     with open(cache_file, "r", encoding="utf-8") as f:
                         cached_data = json.load(f)
+                        if (
+                            content_type == "notes"
+                            and cached_data.get("parameters", {}).get("notes_engine_version")
+                            != PIPELINE_VERSION
+                        ):
+                            logger.info(
+                                "Ignoring notes cache version %s created by an older engine",
+                                target_version,
+                            )
+                            raise ValueError("Stale notes engine cache")
                         logger.info("Returning cached version %s of %s for %s/%s", target_version, content_type, subject, topic)
                         return JsonResponse({
                             "content": cached_data.get("content", ""),
@@ -275,6 +290,7 @@ async def generate_content(request) -> JsonResponse:
             "parameters": {
                 "notes_focus": notes_focus,
                 "notes_custom": notes_custom,
+                "notes_engine_version": PIPELINE_VERSION if content_type == "notes" else None,
                 "assignment_focus": assignment_focus,
                 "assignment_custom": assignment_custom,
                 "video_focus": video_focus,
@@ -314,7 +330,9 @@ async def list_sources(request) -> JsonResponse:
     
     sources = []
     if upload_dir.exists():
-        for item in upload_dir.iterdir():
+        # Uploads are stored in immutable per-job directories so one request
+        # cannot overwrite a file that a worker is still processing.
+        for item in upload_dir.rglob("*"):
             if item.is_file() and not item.name.startswith("."):
                 try:
                     stat = item.stat()

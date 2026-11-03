@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -175,6 +176,8 @@ class Assignment(AuditModel):
     expected_duration = models.IntegerField(default=30) # in minutes
     source_pdf_path = models.CharField(max_length=500, null=True, blank=True)
     professor_allocation = models.ForeignKey('ProfessorAllocation', on_delete=models.SET_NULL, null=True, blank=True, related_name='assignments')
+    oral_defense_enabled = models.BooleanField(default=False)
+    oral_defense_config = models.JSONField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.code} - {self.title}"
@@ -198,6 +201,16 @@ class AssignmentQuestion(AuditModel):
     concept_tags = models.TextField(null=True, blank=True) # JSON array of strings
     difficulty = models.CharField(max_length=50, default='beginner')
     order = models.IntegerField(default=1)
+    visualization_data = models.JSONField(null=True, blank=True)
+    visualization_approved = models.BooleanField(default=False)
+    visualization_approved_at = models.DateTimeField(null=True, blank=True)
+    visualization_approved_by = models.ForeignKey(
+        UserProfile,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_question_visualizations'
+    )
 
     def __str__(self):
         return f"{self.assignment.code} - {self.code}"
@@ -258,6 +271,7 @@ class StudentTopicAssessmentReview(AuditModel):
     engagement_score = models.IntegerField(default=0)
     status = models.CharField(max_length=50, default='in_progress') # completed, in_progress, not_started
     review_comments = models.TextField(null=True, blank=True)
+    saved_answers = models.JSONField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.student.name} - {self.topic.name} - {self.status}"
@@ -297,3 +311,32 @@ class ProfessorAllocation(AuditModel):
 
     def __str__(self):
         return f"{self.batch.name} - {self.subject.name} - {self.professor.name}"
+
+class ChatSession(models.Model):
+    session_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_sessions')
+    assignment = models.ForeignKey('Assignment', on_delete=models.SET_NULL, null=True, blank=True, related_name='chat_sessions')
+    question = models.ForeignKey('AssignmentQuestion', on_delete=models.SET_NULL, null=True, blank=True, related_name='chat_sessions')
+    title = models.CharField(max_length=255, default="New Chat")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'chat_sessions'
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"{self.title} ({self.session_id})"
+
+class ChatMessage(models.Model):
+    session = models.ForeignKey(ChatSession, on_delete=models.CASCADE, related_name='messages')
+    role = models.CharField(max_length=50) # 'user' or 'assistant' or 'system'
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'chat_messages'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.role} at {self.created_at}"

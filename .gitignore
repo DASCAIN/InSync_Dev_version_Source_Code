@@ -20,3 +20,22 @@ __pycache__/
 data/qdrant_storage/
 data/videos/
 storage/openai_voice/
+qdrant_storage/
+SKILL.md
+Procfile.backup
+*.backup
+*.bak
+
+# Qdrant specific
+*.dat
+*.mmap
+*.mappings
+*.versions
+newest_clocks.json
+segment.json
+first-index
+open-*
+qdrant_storage/
+
+# AI Configuration
+.agents/

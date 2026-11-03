@@ -1,0 +1,1742 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ game_title|default:"Oral Defense" }} — InSync{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  /* ─── RESET & ROOT THEMING ─── */
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background-color: #080a12 !important;
+    color: #e2e8f0 !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Cybernetic Blueprint Grid Canvas */
+  .arena-wrapper {
+    background-color: #080a12;
+    background-image:
+      radial-gradient(ellipse 60% 40% at 85% 15%, rgba(244, 63, 94, 0.08), transparent),
+      radial-gradient(ellipse 50% 35% at 15% 85%, rgba(6, 182, 212, 0.05), transparent),
+      linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 28px 14px;
+    box-sizing: border-box;
+  }
+
+  /* ─── TOP NAVIGATION BAR ─── */
+  .arena-topbar {
+    max-width: 1560px;
+    width: 100%;
+    margin: 0 auto 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: max-width 0.25s ease;
+  }
+
+  .arena-topbar.sage-open {
+    max-width: 1800px;
+  }
+
+  .arena-breadcrumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .arena-orb {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #f43f5e;
+    box-shadow: 0 0 10px #f43f5e, 0 0 20px rgba(244, 63, 94, 0.6);
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  .arena-crumb-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #e2e8f0;
+    text-transform: uppercase;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    transition: color 0.2s;
+  }
+  .arena-breadcrumb:hover .arena-crumb-label {
+    color: #ffffff;
+  }
+
+  .arena-crumb-slash {
+    font-size: 11px;
+    color: #475569;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .arena-crumb-trial {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #22d3ee;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .arena-domain-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #111422;
+    border: 1px solid #1e2438;
+    border-radius: 9999px;
+    padding: 6px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #cbd5e1;
+    text-transform: uppercase;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+
+  .arena-top-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .arena-summon-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #131728;
+    border: 1px solid rgba(168, 85, 247, 0.35);
+    border-radius: 9999px;
+    padding: 6px 14px;
+    color: #d8b4fe;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  }
+  .arena-summon-btn:hover {
+    background: #1b2038;
+    border-color: rgba(192, 132, 252, 0.6);
+    color: #f3e8ff;
+    transform: translateY(-1px);
+  }
+
+  .arena-toggle-capsule {
+    width: 32px;
+    height: 18px;
+    border-radius: 9999px;
+    background: #121526;
+    border: 1px solid #23293f;
+    display: flex;
+    align-items: center;
+    padding: 2px;
+    cursor: pointer;
+  }
+  .arena-toggle-knob {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #475569;
+    transition: all 0.25s ease;
+  }
+
+  /* ─── ARENA STAGE (SIDE-BY-SIDE SIMULTANEOUS WORKSPACE) ─── */
+  .arena-stage {
+    max-width: 1560px;
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    gap: 20px;
+    align-items: stretch;
+    justify-content: center;
+    flex: 1;
+    min-height: 0;
+    transition: max-width 0.25s ease;
+  }
+  .arena-stage.sage-open {
+    max-width: 1800px;
+  }
+
+  .inscription-quote mjx-container,
+  .feedback-box mjx-container,
+  .sage-bubble mjx-container {
+    color: inherit !important;
+    max-width: 100%;
+  }
+  .inscription-quote mjx-container[display="true"],
+  .feedback-box mjx-container[display="true"],
+  .sage-bubble mjx-container[display="true"] {
+    margin: .65em 0 !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .arena-main-column {
+    flex: 1 1 0%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    justify-content: space-between;
+    min-height: 0;
+  }
+
+  /* ─── DOCKED SAGE SIDEBAR (COMBINED SAGE SUPPORT PANEL) ─── */
+  .sage-docked-sidebar {
+    width: 380px;
+    min-width: 380px;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, rgba(14, 17, 34, 0.98) 0%, rgba(10, 12, 24, 0.98) 100%);
+    border: 1px solid rgba(168, 85, 247, 0.35);
+    border-radius: 20px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    align-self: stretch;
+    height: 100%;
+    transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), min-width 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+  }
+
+  .sage-docked-sidebar.collapsed {
+    width: 0 !important;
+    min-width: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    border-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .sage-sidebar-inner {
+    width: 380px;
+    min-width: 380px;
+    flex-shrink: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  @media (max-width: 1024px) {
+    .arena-stage {
+      flex-direction: column;
+    }
+    .sage-docked-sidebar {
+      width: 100% !important;
+      min-width: 100% !important;
+    }
+    .sage-sidebar-inner {
+      width: 100% !important;
+      min-width: 100% !important;
+    }
+  }
+
+  /* ─── CARDS ─── */
+  .arena-card {
+    background: linear-gradient(180deg, rgba(16, 20, 35, 0.92) 0%, rgba(11, 14, 26, 0.96) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ─── BOSS HUD CARD (TOP) ─── */
+  .boss-hud-card {
+    padding: 24px 28px;
+  }
+
+  .boss-glow-bg {
+    position: absolute;
+    top: -50px;
+    right: -50px;
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(circle, rgba(244, 63, 94, 0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .boss-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .boss-profile {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .boss-icon-tile {
+    width: 60px;
+    height: 60px;
+    border-radius: 14px;
+    background: #141323;
+    border: 1.5px solid rgba(244, 63, 94, 0.4);
+    box-shadow: 0 0 20px rgba(244, 63, 94, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .boss-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .boss-name {
+    font-size: 24px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.01em;
+  }
+
+  .boss-badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #f43f5e;
+    background: rgba(244, 63, 94, 0.12);
+    border: 1px solid rgba(244, 63, 94, 0.4);
+    padding: 2px 10px;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .boss-phase-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    font-size: 13px;
+  }
+
+  .boss-phase-tag {
+    color: #22d3ee;
+    font-weight: 700;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    letter-spacing: 0.05em;
+  }
+  .boss-phase-sep {
+    color: #475569;
+  }
+  .boss-phase-desc {
+    color: #94a3b8;
+    font-weight: 400;
+  }
+
+  /* HP Section */
+  .boss-hp-section {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    min-width: 250px;
+    flex-shrink: 0;
+  }
+
+  .boss-hp-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .boss-hp-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #f43f5e;
+    text-transform: uppercase;
+  }
+
+  .boss-hp-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.04em;
+  }
+
+  .boss-hp-track {
+    width: 240px;
+    height: 10px;
+    border-radius: 9999px;
+    background: #151829;
+    border: 1px solid #242a42;
+    overflow: hidden;
+    padding: 1px;
+  }
+
+  .boss-hp-fill {
+    height: 100%;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, #f43f5e 0%, #fb7185 60%, #fbbf24 100%);
+    box-shadow: 0 0 12px rgba(244, 63, 94, 0.5);
+    transition: width 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* Inscription Box */
+  .inscription-box {
+    margin-top: 20px;
+    background: #080a14;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    padding: 18px 22px;
+  }
+
+  .inscription-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .inscription-title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .inscription-mic-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: rgba(244, 63, 94, 0.12);
+    border: 1px solid rgba(244, 63, 94, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f43f5e;
+  }
+
+  .inscription-tag {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #64748b;
+    text-transform: uppercase;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .replay-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #121526;
+    border: 1px solid #262c44;
+    border-radius: 9999px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .replay-pill-btn:hover {
+    background: #1c213a;
+    color: #ffffff;
+    border-color: #3b4468;
+  }
+
+  .inscription-quote {
+    margin-top: 12px;
+    font-size: 15px;
+    line-height: 1.65;
+    color: #e2e8f0;
+    font-weight: 400;
+  }
+
+  /* ─── BOTTOM SPLIT DECK ─── */
+  .arena-split-deck {
+    display: grid;
+    grid-template-columns: minmax(360px, 440px) 1fr;
+    gap: 18px;
+    width: 100%;
+    flex: 1;
+    min-height: 480px;
+  }
+
+  @media (max-width: 960px) {
+    .arena-split-deck {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* ─── LEFT: VERBAL DEFENSE CARD ─── */
+  .verbal-defense-card {
+    padding: 24px 26px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    min-height: 480px;
+  }
+
+  .card-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #94a3b8;
+    text-transform: uppercase;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .standby-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #22d3ee;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .standby-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22d3ee;
+    box-shadow: 0 0 8px #22d3ee;
+    display: inline-block;
+  }
+
+  /* Mic Visualization Area */
+  .mic-visualizer-area {
+    margin: auto 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 0;
+  }
+
+  .mic-radar-circle {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    border: 1px solid rgba(6, 182, 212, 0.2);
+    box-shadow: 0 0 35px rgba(6, 182, 212, 0.1), inset 0 0 30px rgba(6, 182, 212, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .mic-main-button {
+    width: 98px;
+    height: 88px;
+    border-radius: 50%;
+    border: 2px solid #22d3ee;
+    background: #070913;
+    box-shadow: 0 0 25px rgba(6, 182, 212, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    outline: none;
+  }
+  .mic-main-button:hover {
+    border-color: #67e8f9;
+    box-shadow: 0 0 35px rgba(6, 182, 212, 0.7);
+    transform: scale(1.05);
+  }
+  .mic-main-button:active {
+    transform: scale(0.96);
+  }
+
+  .mic-main-button.is-recording {
+    border-color: #f43f5e !important;
+    box-shadow: 0 0 30px rgba(244, 63, 94, 0.7) !important;
+    animation: micPulse 1.2s infinite;
+  }
+  @keyframes micPulse {
+    0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.7); }
+    70% { box-shadow: 0 0 0 18px rgba(244, 63, 94, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
+  }
+
+  /* Waveform Dots Strip */
+  .audio-dots-strip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 22px;
+  }
+
+  .audio-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(34, 211, 238, 0.3);
+    transition: all 0.18s ease;
+  }
+  .audio-dot.active {
+    background: #22d3ee;
+    box-shadow: 0 0 6px #22d3ee;
+    transform: scale(1.8);
+  }
+
+  /* Actions */
+  .verbal-actions-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .cast-defense-btn {
+    width: 100%;
+    padding: 14px 20px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(90deg, #3b82f6 0%, #6366f1 45%, #a855f7 100%);
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    font-family: inherit;
+  }
+  .cast-defense-btn:hover:not(:disabled) {
+    background: linear-gradient(90deg, #60a5fa 0%, #818cf8 45%, #c084fc 100%);
+    box-shadow: 0 6px 24px rgba(124, 58, 237, 0.55);
+    transform: translateY(-1px);
+  }
+  .cast-defense-btn:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  .cast-defense-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .verbal-sub-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2px;
+  }
+
+  .sub-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    color: #94a3b8;
+    transition: color 0.2s;
+  }
+  .sub-action-btn:hover {
+    color: #ffffff;
+  }
+
+  .ask-sage-btn {
+    color: #f59e0b;
+    font-weight: 600;
+  }
+  .ask-sage-btn:hover {
+    color: #fbbf24;
+  }
+
+  /* ─── RIGHT: SPOKEN TRANSCRIPT CARD ─── */
+  .spoken-transcript-card {
+    padding: 24px 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    min-height: 480px;
+  }
+
+  .transcript-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .transcript-word-count {
+    font-size: 12px;
+    font-weight: 600;
+    color: #22d3ee;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .transcript-box {
+    background: #080a14;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    padding: 18px 22px;
+    margin: 14px 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    min-height: 310px;
+  }
+
+  .transcript-textarea {
+    width: 100%;
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #f1f5f9;
+    font-size: 15px;
+    line-height: 1.7;
+    font-family: 'Inter', sans-serif;
+    resize: none;
+    outline: none;
+  }
+  .transcript-textarea::placeholder {
+    color: #475569;
+  }
+
+  .listening-badge {
+    position: absolute;
+    bottom: 12px;
+    right: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(6, 182, 212, 0.15);
+    border: 1px solid rgba(6, 182, 212, 0.4);
+    border-radius: 9999px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #22d3ee;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+  .listening-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #22d3ee;
+    animation: blink 1s infinite alternate;
+  }
+  @keyframes blink {
+    0% { opacity: 0.3; }
+    100% { opacity: 1; }
+  }
+
+  .feedback-box {
+    margin-bottom: 12px;
+    padding: 12px 16px;
+    background: rgba(168, 85, 247, 0.1);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    border-radius: 10px;
+    font-size: 13px;
+    color: #e9d5ff;
+    line-height: 1.5;
+  }
+
+  .transcript-footer-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #64748b;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    padding: 0 2px;
+  }
+
+  .evaluation-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #94a3b8;
+  }
+  .eval-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 6px #10b981;
+  }
+
+  /* ─── BOTTOM PAGE FOOTER ─── */
+  .arena-page-footer {
+    text-align: center;
+    padding-top: 14px;
+  }
+  .arena-footer-text {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    color: #475569;
+    text-transform: uppercase;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  /* ─── SAGE SIDEBAR INTERNAL ELEMENTS ─── */
+  .sage-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(168, 85, 247, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #0e1122;
+  }
+  .sage-content-wrap {
+    padding: 20px 22px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex: 1;
+    overflow-y: auto;
+  }
+  .sage-chip {
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(30, 27, 75, 0.5);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    color: #e2e8f0;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .sage-chip:hover, .sage-chip.active {
+    background: rgba(168, 85, 247, 0.3);
+    border-color: #c084fc;
+    color: #ffffff;
+  }
+  .sage-bubble {
+    padding: 16px;
+    border-radius: 12px;
+    background: rgba(168, 85, 247, 0.1);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* ─── DAMAGE & SHAKE ANIMATIONS ─── */
+  .shake-arena {
+    animation: shake 0.45s cubic-bezier(.36,.07,.19,.97) both;
+  }
+  @keyframes shake {
+    10%, 90% { transform: translate3d(-2px, 0, 0); }
+    20%, 80% { transform: translate3d(3px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+    40%, 60% { transform: translate3d(4px, 0, 0); }
+  }
+  .damage-popup {
+    position: absolute;
+    top: -12px;
+    right: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 20px;
+    font-weight: 800;
+    color: #f43f5e;
+    animation: floatUp 1.2s forwards;
+    pointer-events: none;
+  }
+  @keyframes floatUp {
+    0% { opacity: 0; transform: translateY(10px) scale(0.8); }
+    20% { opacity: 1; transform: translateY(-5px) scale(1.15); }
+    80% { opacity: 1; transform: translateY(-25px) scale(1); }
+    100% { opacity: 0; transform: translateY(-40px) scale(0.9); }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="arena-container" class="arena-wrapper">
+
+  <!-- ─── TOP NAVIGATION BAR ─── -->
+  <header id="arena-topbar" class="arena-topbar">
+    <!-- Left: Encounter Breadcrumb -->
+    <a href="{% url 'voice_tutor:take_assignment' assignment.code %}" class="arena-breadcrumb" title="Back to Assignment">
+      <span class="arena-orb"></span>
+      <span class="arena-crumb-label">ENCOUNTER</span>
+      <span class="arena-crumb-slash">/</span>
+      <span id="trial-indicator" class="arena-crumb-trial">LEVEL 1 / {{ total_levels }}</span>
+    </a>
+
+    <!-- Center: Oral Defense title -->
+    <div class="arena-domain-pill">
+      <svg viewBox="0 0 24 24" fill="#fbbf24" stroke="#fbbf24" width="13" height="13" stroke-width="2">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+      </svg>
+      <span>{{ game_title|upper }}</span>
+    </div>
+
+    <!-- Right: Summon Sage Button & Toggle -->
+    <div class="arena-top-actions">
+      <button id="summon-sage-btn" type="button" class="arena-summon-btn" onclick="toggleSageDrawer()" title="Summon Sage AI Coach">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" width="13" height="13">
+          <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+        </svg>
+        <span>SUMMON SAGE</span>
+      </button>
+
+      <div class="arena-toggle-capsule" onclick="toggleSageDrawer()" title="Sage Consultation Switch">
+        <div id="sage-status-toggle" class="arena-toggle-knob"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ─── SIDE-BY-SIDE SIMULTANEOUS STAGE (NO BLUR, NO BACKDROP) ─── -->
+  <div id="arena-stage" class="arena-stage">
+
+    <!-- LEFT: MAIN ARENA COLUMN -->
+    <main class="arena-main-column">
+
+      <!-- TOP: PROFESSOR ALGOR BOSS CARD -->
+      <div class="arena-card boss-hud-card">
+        <div class="boss-glow-bg"></div>
+
+        <!-- Boss Header Row -->
+        <div class="boss-header-row">
+          <!-- Left: Avatar Tile + Details -->
+          <div class="boss-profile">
+            <div id="boss-avatar-frame" class="boss-icon-tile">
+              <!-- 3 Stacked Isometric Layers (Layers Icon) -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="30" height="30" style="filter: drop-shadow(0 0 8px rgba(244, 63, 94, 0.7));">
+                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                <polyline points="2 17 12 22 22 17"></polyline>
+                <polyline points="2 12 12 17 22 12"></polyline>
+              </svg>
+              <div id="damage-container"></div>
+            </div>
+
+            <div>
+              <div class="boss-title-row">
+                <h2 class="boss-name">{{ boss_name|default:"Professor Algor" }}</h2>
+                <span class="boss-badge">{{ boss_title|default:"GUARDIAN OF EXTREMA" }}</span>
+              </div>
+              <div class="boss-phase-row">
+                <span id="phase-badge" class="boss-phase-tag">PHASE 1</span>
+                <span class="boss-phase-sep">•</span>
+                <span id="phase-label" class="boss-phase-desc">{{ first_level.topic }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: HP Bar & Counter -->
+          <div class="boss-hp-section">
+            <div class="boss-hp-header">
+              <span class="boss-hp-label">BOSS HP</span>
+              <span id="hp-number" class="boss-hp-value">{{ initial_hp }} / {{ initial_hp }}</span>
+            </div>
+            <div class="boss-hp-track">
+              <div id="hp-bar" class="boss-hp-fill" style="width: 100%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- The Inscription Dialogue Box -->
+        <div class="inscription-box">
+          <div class="inscription-top">
+            <div class="inscription-title-group">
+              <div class="inscription-mic-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                  <line x1="12" x2="12" y1="19" y2="22"></line>
+                </svg>
+              </div>
+              <span class="inscription-tag">THE INSCRIPTION</span>
+            </div>
+
+            <button id="replay-voice-btn" type="button" class="replay-pill-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2" width="13" height="13">
+                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path>
+                <path d="M21 3v5h-5"></path>
+              </svg>
+              <span>Replay</span>
+            </button>
+          </div>
+
+          <p id="boss-dialogue-text" class="inscription-quote">
+            “{{ first_level.question }}”
+          </p>
+        </div>
+      </div>
+
+      <!-- BOTTOM DECK: 2 SIDE-BY-SIDE CARDS -->
+      <div class="arena-split-deck">
+
+        <!-- LEFT: VERBAL DEFENSE CARD -->
+        <div class="arena-card verbal-defense-card">
+          <div class="card-header-bar">
+            <span class="card-section-title">VERBAL DEFENSE</span>
+            <div id="standby-status" class="standby-indicator">
+              <span id="standby-dot" class="standby-dot"></span>
+              <span id="standby-text">STANDBY</span>
+            </div>
+          </div>
+
+          <!-- Center Glowing Mic & Waveform Dots -->
+          <div class="mic-visualizer-area">
+            <div class="mic-radar-circle">
+              <button id="mic-btn" type="button" class="mic-main-button" title="Tap to speak defense">
+                <svg id="mic-svg" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2" width="34" height="34" style="filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.8));">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                  <line x1="12" x2="12" y1="19" y2="22"></line>
+                </svg>
+              </button>
+            </div>
+
+            <!-- 19 Discrete Waveform Dots -->
+            <div id="audio-dots-row" class="audio-dots-strip">
+              <span class="audio-dot"></span><span class="audio-dot"></span><span class="audio-dot"></span>
+              <span class="audio-dot"></span><span class="audio-dot"></span><span class="audio-dot"></span>
+              <span class="audio-dot"></span><span class="audio-dot"></span><span class="audio-dot"></span>
+              <span class="audio-dot"></span><span class="audio-dot"></span><span class="audio-dot"></span>
+              <span class="audio-dot"></span><span class="audio-dot"></span><span class="audio-dot"></span>
+              <span class="audio-dot"></span><span class="audio-dot"></span><span class="audio-dot"></span>
+              <span class="audio-dot"></span>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="verbal-actions-group">
+            <button id="cast-defense-btn" type="button" disabled class="cast-defense-btn">
+              <svg viewBox="0 0 24 24" fill="#ffffff" stroke="#ffffff" width="15" height="15">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+              <span>CAST DEFENSE</span>
+            </button>
+
+            <div class="verbal-sub-actions">
+              <button id="clear-btn" type="button" class="sub-action-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+                  <path d="M3 6h18"></path>
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                </svg>
+                <span>Clear</span>
+              </button>
+
+              <button type="button" onclick="toggleSageDrawer()" class="sub-action-btn ask-sage-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" width="13" height="13">
+                  <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+                </svg>
+                <span>Ask Sage</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: SPOKEN TRANSCRIPT CARD -->
+        <div class="arena-card spoken-transcript-card">
+          <div class="card-header-bar">
+            <div class="transcript-title-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2" width="15" height="15">
+                <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path>
+              </svg>
+              <span class="card-section-title">SPOKEN TRANSCRIPT</span>
+            </div>
+            <span id="word-count" class="transcript-word-count">0 words</span>
+          </div>
+
+          <!-- Recessed Textarea Box -->
+          <div class="transcript-box">
+            <textarea
+              id="transcript-input"
+              rows="7"
+              placeholder="Your oral defense stream appears here as you speak..."
+              class="transcript-textarea"
+            ></textarea>
+
+            <div id="listening-indicator" class="listening-badge" style="display: none;">
+              <span class="listening-dot"></span>
+              <span>Listening...</span>
+            </div>
+          </div>
+
+          <!-- Assessment Feedback (Shown when boss responds) -->
+          <div id="feedback-card" class="feedback-box" style="display: none;">
+            <div style="font-weight: 700; color: #ffffff; margin-bottom: 2px;">{{ boss_name }}'s Assessment:</div>
+            <p id="feedback-text"></p>
+          </div>
+
+          <!-- Footer Bar -->
+          <div class="transcript-footer-bar">
+            <div class="evaluation-status">
+              <span class="eval-dot"></span>
+              <span id="readiness-label">Ready for evaluation</span>
+            </div>
+            <span>Auto-transcription active</span>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- RIGHT: DOCKED SAGE SIDEBAR (CHAT CLUE BOX) -->
+    <aside id="sage-sidebar" class="sage-docked-sidebar collapsed" style="display: none;" aria-label="Sage Clue Box">
+      <div class="sage-sidebar-inner">
+        <!-- Sage Header -->
+        <div class="sage-header">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(168, 85, 247, 0.2); border: 1px solid rgba(168, 85, 247, 0.4); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" width="16" height="16">
+                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+              </svg>
+            </div>
+            <div>
+              <div style="font-size: 14px; font-weight: 700; color: #ffffff; letter-spacing: 0.02em;">Sage Clues</div>
+              <div style="font-size: 10px; color: #c084fc; font-family: monospace;">
+                <span id="sage-tokens-text">2</span> Clues Left
+              </div>
+            </div>
+          </div>
+          <button type="button" onclick="toggleSageDrawer()" style="background: none; border: none; color: #94a3b8; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;" title="Close Clue Box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Chat Clue Box Body -->
+        <div class="sage-content-wrap">
+          <!-- Clue Response Message -->
+          <div class="sage-bubble">
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-family: monospace; font-weight: 700; color: #c084fc; text-transform: uppercase; letter-spacing: 0.06em;">
+              <span id="sage-response-title">Sage's Clue:</span>
+            </div>
+            <p id="sage-coach-text" style="font-size: 13px; color: #e2e8f0; line-height: 1.6; margin: 4px 0 0;">
+              Need a hint? Ask a question below or pick a quick clue to help form your defense against {{ boss_name }}.
+            </p>
+            <button type="button" id="insert-sage-tip-btn" style="display: none; width: 100%; margin-top: 8px; padding: 8px 12px; border-radius: 8px; background: rgba(168, 85, 247, 0.25); border: 1px solid rgba(168, 85, 247, 0.4); color: #f3e8ff; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.2s;">
+              + Insert into Defense
+            </button>
+          </div>
+
+          <!-- Quick Clue Prompts -->
+          <div>
+            <div style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; font-family: monospace; letter-spacing: 0.08em; margin-bottom: 8px;">
+              QUICK CLUES
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <button type="button" class="sage-suggest-chip" data-prompt="What are the most important ideas I should explain for this level?" style="text-align: left; padding: 8px 12px; border-radius: 8px; background: #131728; border: 1px solid #1e2438; color: #cbd5e1; font-size: 12px; cursor: pointer; transition: all 0.2s;">
+                Clue: What ideas must I explain?
+              </button>
+              <button type="button" class="sage-suggest-chip" data-prompt="Can you give me an intuitive example without giving me a script?" style="text-align: left; padding: 8px 12px; border-radius: 8px; background: #131728; border: 1px solid #1e2438; color: #cbd5e1; font-size: 12px; cursor: pointer; transition: all 0.2s;">
+                Clue: Give me an intuitive example
+              </button>
+              <button type="button" class="sage-suggest-chip" data-prompt="What common mistake should I avoid in my answer?" style="text-align: left; padding: 8px 12px; border-radius: 8px; background: #131728; border: 1px solid #1e2438; color: #cbd5e1; font-size: 12px; cursor: pointer; transition: all 0.2s;">
+                Clue: What mistake should I avoid?
+              </button>
+            </div>
+          </div>
+
+          <!-- Ask for Clue Form -->
+          <div style="border-top: 1px solid rgba(168, 85, 247, 0.15); padding-top: 12px; margin-top: auto;">
+            <form id="sage-ask-form" style="display: flex; gap: 8px;">
+              <input
+                type="text"
+                id="sage-question-input"
+                placeholder="Ask Sage for a clue..."
+                style="flex: 1; padding: 9px 12px; border-radius: 8px; background: #131728; border: 1px solid #28304c; color: #ffffff; font-size: 12px; outline: none;"
+              />
+              <button type="submit" id="sage-ask-submit-btn" style="padding: 9px 14px; border-radius: 8px; background: linear-gradient(135deg, #7c3aed, #9333ea); border: none; color: #ffffff; font-size: 12px; font-weight: 700; cursor: pointer; flex-shrink: 0;">
+                Ask
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ─── BOTTOM PAGE FOOTER ─── -->
+  <footer class="arena-page-footer">
+    <p class="arena-footer-text">
+      {{ game_title|upper }} • ORAL DEFENSE PROTOCOL • {{ total_levels }} LEVEL{{ total_levels|pluralize }}
+    </p>
+  </footer>
+
+  <!-- ─── VICTORY MODAL ─── -->
+  <div id="victory-modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(6px); z-index: 70; align-items: center; justify-content: center; padding: 16px;">
+    <div style="background: linear-gradient(180deg, #101423 0%, #0c0f1c 100%); border: 2px solid rgba(245, 158, 11, 0.5); border-radius: 24px; max-width: 480px; width: 100%; padding: 32px; text-align: center; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);">
+      <div style="margin-bottom: 14px; display: flex; justify-content: center;">
+        <div style="width: 56px; height: 56px; border-radius: 16px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); display: flex; align-items: center; justify-content: center;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="28" height="28">
+            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
+            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
+            <path d="M4 22h16"></path>
+            <path d="M10 14.66V17c0 .55-.45 1-1 1H7"></path>
+            <path d="M14 14.66V17c0 .55.45 1 1 1h2"></path>
+            <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path>
+          </svg>
+        </div>
+      </div>
+      <div style="font-size: 11px; font-weight: 700; color: #fbbf24; text-transform: uppercase; font-family: monospace; letter-spacing: 0.12em;">Oral Defense Mastered</div>
+      <h2 style="font-size: 26px; font-weight: 800; color: #ffffff; margin: 8px 0 12px;">{{ boss_name|upper }} DEFEATED!</h2>
+      <p style="font-size: 14px; color: #cbd5e1; line-height: 1.6; margin-bottom: 24px;">
+        You passed every professor-authored level and demonstrated your understanding of {{ topic_name }}.
+      </p>
+      <div style="display: flex; gap: 10px;">
+        <a href="{% url 'voice_tutor:student_dashboard' %}" style="flex: 1; padding: 12px 16px; border-radius: 12px; background: linear-gradient(90deg, #3b82f6, #8b5cf6); color: #ffffff; font-size: 13px; font-weight: 700; text-decoration: none; text-align: center;">
+          Return to Dashboard
+        </a>
+        <button type="button" onclick="location.reload()" style="padding: 12px 16px; border-radius: 12px; background: #1e2438; color: #cbd5e1; font-size: 13px; font-weight: 600; border: none; cursor: pointer;">
+          Replay
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio Players -->
+  <audio id="boss-audio-player" style="display: none;"></audio>
+
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+{{ game_levels|json_script:"oral-defense-levels" }}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const assignmentId = '{{ assignment.code|escapejs }}';
+  const gameLevels = JSON.parse(document.getElementById('oral-defense-levels').textContent || '[]');
+  let currentRound = 1;
+  const bossMaxHp = {{ initial_hp|default:100 }};
+  let bossHp = bossMaxHp;
+  let isListening = false;
+  let isThinking = false;
+  let recognition = null;
+  let currentAudioBase64 = null;
+  let recordingSeconds = 0;
+  let recordingTimerInterval = null;
+  let audioDotsInterval = null;
+  let mathTypesetChain = Promise.resolve();
+
+  function typesetMath(...elements) {
+    const targets = elements.filter(Boolean);
+    if (!targets.length || !window.MathJax || !window.MathJax.typesetPromise) return;
+    mathTypesetChain = mathTypesetChain.then(() => {
+      return window.MathJax.typesetPromise(targets);
+    }).catch(err => console.log('MathJax error:', err));
+  }
+
+  function setMathText(element, value, quoted = false) {
+    if (!element) return;
+    const text = String(value || '');
+    if (window.MathJax && window.MathJax.typesetClear) {
+      window.MathJax.typesetClear([element]);
+    }
+    element.textContent = quoted ? `“${text}”` : text;
+    typesetMath(element);
+  }
+
+  // DOM Handles
+  const arenaContainer = document.getElementById('arena-container');
+  const arenaStage = document.getElementById('arena-stage');
+  const arenaTopbar = document.getElementById('arena-topbar');
+  const hpBar = document.getElementById('hp-bar');
+  const hpNumber = document.getElementById('hp-number');
+  const trialIndicator = document.getElementById('trial-indicator');
+  const phaseBadge = document.getElementById('phase-badge');
+  const phaseLabel = document.getElementById('phase-label');
+  const bossDialogueText = document.getElementById('boss-dialogue-text');
+  const bossAvatarFrame = document.getElementById('boss-avatar-frame');
+  const replayVoiceBtn = document.getElementById('replay-voice-btn');
+  const micBtn = document.getElementById('mic-btn');
+  const micSvg = document.getElementById('mic-svg');
+  const standbyStatus = document.getElementById('standby-status');
+  const standbyDot = document.getElementById('standby-dot');
+  const standbyText = document.getElementById('standby-text');
+  const audioDots = document.querySelectorAll('.audio-dot');
+  const listeningIndicator = document.getElementById('listening-indicator');
+  const transcriptInput = document.getElementById('transcript-input');
+  const wordCount = document.getElementById('word-count');
+  const readinessLabel = document.getElementById('readiness-label');
+  const castDefenseBtn = document.getElementById('cast-defense-btn');
+  const clearBtn = document.getElementById('clear-btn');
+  const feedbackCard = document.getElementById('feedback-card');
+  const feedbackText = document.getElementById('feedback-text');
+  const victoryModal = document.getElementById('victory-modal');
+  const damageContainer = document.getElementById('damage-container');
+  const audioPlayer = document.getElementById('boss-audio-player');
+
+  // Sage Clue Box Handles
+  const sageSidebar = document.getElementById('sage-sidebar');
+  const sageTokensText = document.getElementById('sage-tokens-text');
+  const sageStatusToggle = document.getElementById('sage-status-toggle');
+  const sageCoachText = document.getElementById('sage-coach-text');
+  const sageResponseTitle = document.getElementById('sage-response-title');
+  const insertSageTipBtn = document.getElementById('insert-sage-tip-btn');
+  const sageSuggestChips = document.querySelectorAll('.sage-suggest-chip');
+  const sageAskForm = document.getElementById('sage-ask-form');
+  const sageQuestionInput = document.getElementById('sage-question-input');
+
+  let sageTokens = 2;
+  let lastSageWhisperText = "";
+
+  window.toggleSageDrawer = function() {
+    const isCollapsed = sageSidebar.classList.contains('collapsed');
+    if (isCollapsed) {
+      sageSidebar.style.display = 'flex';
+      void sageSidebar.offsetWidth;
+      sageSidebar.classList.remove('collapsed');
+      arenaStage.classList.add('sage-open');
+      arenaTopbar.classList.add('sage-open');
+      sageStatusToggle.style.backgroundColor = '#c084fc';
+      sageStatusToggle.style.transform = 'translateX(14px)';
+    } else {
+      sageSidebar.classList.add('collapsed');
+      arenaStage.classList.remove('sage-open');
+      arenaTopbar.classList.remove('sage-open');
+      sageStatusToggle.style.backgroundColor = '#475569';
+      sageStatusToggle.style.transform = 'translateX(0)';
+      setTimeout(() => {
+        if (sageSidebar.classList.contains('collapsed')) {
+          sageSidebar.style.display = 'none';
+        }
+      }, 260);
+    }
+  };
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !sageSidebar.classList.contains('collapsed')) {
+      toggleSageDrawer();
+    }
+  });
+
+  // Speech Recognition
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      isListening = true;
+      updateMicUI(true);
+      startRecordingTimer();
+    };
+
+    recognition.onresult = (event) => {
+      let finalTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        }
+      }
+      if (finalTranscript) {
+        const prev = transcriptInput.value ? transcriptInput.value.trim() + ' ' : '';
+        transcriptInput.value = prev + finalTranscript.trim();
+      }
+      updateTranscriptStats();
+    };
+
+    recognition.onerror = () => {
+      isListening = false;
+      updateMicUI(false);
+      stopRecordingTimer();
+    };
+
+    recognition.onend = () => {
+      isListening = false;
+      updateMicUI(false);
+      stopRecordingTimer();
+    };
+  }
+
+  micBtn.addEventListener('click', () => {
+    if (!recognition) {
+      transcriptInput.focus();
+      return;
+    }
+    if (isListening) {
+      recognition.stop();
+    } else {
+      try {
+        recognition.start();
+      } catch (_) {}
+    }
+  });
+
+  function startRecordingTimer() {
+    recordingSeconds = 0;
+    if (recordingTimerInterval) clearInterval(recordingTimerInterval);
+    recordingTimerInterval = setInterval(() => {
+      recordingSeconds++;
+      const mins = String(Math.floor(recordingSeconds / 60)).padStart(2, '0');
+      const secs = String(recordingSeconds % 60).padStart(2, '0');
+      standbyText.textContent = `REC ${mins}:${secs}`;
+    }, 1000);
+
+    if (audioDotsInterval) clearInterval(audioDotsInterval);
+    audioDotsInterval = setInterval(() => {
+      audioDots.forEach(dot => {
+        dot.classList.toggle('active', Math.random() > 0.45);
+      });
+    }, 180);
+  }
+
+  function stopRecordingTimer() {
+    if (recordingTimerInterval) {
+      clearInterval(recordingTimerInterval);
+      recordingTimerInterval = null;
+    }
+    if (audioDotsInterval) {
+      clearInterval(audioDotsInterval);
+      audioDotsInterval = null;
+    }
+    audioDots.forEach(dot => dot.classList.remove('active'));
+    standbyText.textContent = "STANDBY";
+  }
+
+  function updateMicUI(listening) {
+    if (listening) {
+      micBtn.classList.add('is-recording');
+      micSvg.innerHTML = '<rect x="6" y="6" width="12" height="12" rx="2" stroke="#f43f5e" fill="#f43f5e"></rect>';
+      standbyStatus.style.color = '#f43f5e';
+      standbyDot.style.background = '#f43f5e';
+      standbyDot.style.boxShadow = '0 0 10px #f43f5e';
+      standbyText.textContent = 'REC 00:00';
+      listeningIndicator.style.display = 'inline-flex';
+    } else {
+      micBtn.classList.remove('is-recording');
+      micSvg.innerHTML = '<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" stroke="#22d3ee"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="#22d3ee"></path><line x1="12" x2="12" y1="19" y2="22" stroke="#22d3ee"></line>';
+      standbyStatus.style.color = '#22d3ee';
+      standbyDot.style.background = '#22d3ee';
+      standbyDot.style.boxShadow = '0 0 8px #22d3ee';
+      standbyText.textContent = 'STANDBY';
+      listeningIndicator.style.display = 'none';
+    }
+  }
+
+  transcriptInput.addEventListener('input', updateTranscriptStats);
+
+  function updateTranscriptStats() {
+    const text = transcriptInput.value.trim();
+    const words = text ? text.split(/\s+/).length : 0;
+    wordCount.textContent = `${words} words`;
+
+    if (words === 0) {
+      readinessLabel.textContent = "Ready for evaluation";
+      castDefenseBtn.disabled = true;
+    } else if (words < 10) {
+      readinessLabel.textContent = "Drafting defense...";
+      castDefenseBtn.disabled = isThinking;
+    } else {
+      readinessLabel.textContent = "Ready to strike";
+      castDefenseBtn.disabled = isThinking;
+    }
+  }
+
+  clearBtn.addEventListener('click', () => {
+    transcriptInput.value = '';
+    updateTranscriptStats();
+    transcriptInput.focus();
+  });
+
+  // Audio Playback
+  function playBossAudio(audioBase64, textFallback) {
+    currentAudioBase64 = audioBase64;
+    setBossSpeakingVisuals(true);
+
+    if (audioBase64) {
+      audioPlayer.src = audioBase64;
+      audioPlayer.play().catch(() => fallbackSpeak(textFallback));
+      audioPlayer.onended = () => setBossSpeakingVisuals(false);
+      audioPlayer.onerror = () => {
+        setBossSpeakingVisuals(false);
+        fallbackSpeak(textFallback);
+      };
+    } else {
+      fallbackSpeak(textFallback);
+    }
+  }
+
+  function fallbackSpeak(text, pitch = 0.9, onEnd = null) {
+    if (!('speechSynthesis' in window) || !text) {
+      if (onEnd) onEnd();
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.pitch = pitch;
+    utterance.rate = 1.0;
+    utterance.onend = () => {
+      setBossSpeakingVisuals(false);
+      if (onEnd) onEnd();
+    };
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function setBossSpeakingVisuals(isSpeaking) {
+    if (isSpeaking) {
+      bossAvatarFrame.style.boxShadow = '0 0 35px rgba(244, 63, 94, 0.7)';
+    } else {
+      bossAvatarFrame.style.boxShadow = '0 0 20px rgba(244, 63, 94, 0.2)';
+    }
+  }
+
+  replayVoiceBtn.addEventListener('click', () => {
+    if (currentAudioBase64) {
+      audioPlayer.currentTime = 0;
+      setBossSpeakingVisuals(true);
+      audioPlayer.play();
+    } else {
+      setBossSpeakingVisuals(true);
+      fallbackSpeak(bossDialogueText.textContent);
+    }
+  });
+
+  async function loadIntro() {
+    try {
+      const res = await fetch("{% url 'voice_tutor:api_oral_defense_intro' %}?round=1&assignment_id=" + encodeURIComponent(assignmentId));
+      if (!res.ok) throw new Error("Failed to load intro");
+      const data = await res.json();
+      setMathText(bossDialogueText, data.boss_dialogue, true);
+      playBossAudio(data.audio_base64, data.boss_dialogue);
+    } catch (_) {
+      const fallbackQuestion = gameLevels[0]?.question || 'Explain and defend your understanding of this topic.';
+      setMathText(bossDialogueText, fallbackQuestion, true);
+      playBossAudio(null, bossDialogueText.textContent);
+    }
+  }
+
+  castDefenseBtn.addEventListener('click', async () => {
+    if (isListening && recognition) recognition.stop();
+    const transcript = transcriptInput.value.trim();
+    if (!transcript) return;
+
+    isThinking = true;
+    castDefenseBtn.disabled = true;
+    castDefenseBtn.innerHTML = '<span>EVALUATING DEFENSE...</span>';
+
+    try {
+      const response = await fetch("{% url 'voice_tutor:api_oral_defense_turn' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+          assignment_id: assignmentId,
+          round: currentRound,
+          transcript: transcript,
+          boss_hp: bossHp
+        })
+      });
+
+      if (!response.ok) throw new Error("Evaluation failed");
+      const result = await response.json();
+      handleTurnResult(result);
+    } catch (err) {
+      console.error(err);
+      alert("Error evaluating defense. Please try again.");
+    } finally {
+      isThinking = false;
+      castDefenseBtn.disabled = false;
+      castDefenseBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="#ffffff" stroke="#ffffff" width="15" height="15">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+        <span>CAST DEFENSE</span>
+      `;
+    }
+  });
+
+  function handleTurnResult(result) {
+    const damage = result.damage_dealt || 0;
+    const newHp = result.boss_hp;
+    const isDefeated = result.is_defeated;
+
+    if (damage > 0) {
+      triggerDamageAnimation(damage);
+    }
+
+    bossHp = newHp;
+    updateHealthUI(bossHp);
+
+    setMathText(bossDialogueText, result.boss_dialogue, true);
+    playBossAudio(result.audio_base64, result.boss_dialogue);
+
+    if (result.feedback) {
+      setMathText(feedbackText, result.feedback);
+      feedbackCard.style.display = 'block';
+    }
+
+    if (isDefeated || bossHp <= 0) {
+      triggerVictory();
+      return;
+    }
+
+    if (result.next_round && result.next_round !== currentRound) {
+      currentRound = result.next_round;
+      const activeLevel = gameLevels[currentRound - 1] || {};
+      trialIndicator.textContent = `LEVEL ${currentRound} / ${gameLevels.length}`;
+      phaseBadge.textContent = `PHASE ${currentRound}`;
+      setMathText(phaseLabel, activeLevel.topic || activeLevel.title || `Level ${currentRound}`);
+      transcriptInput.value = '';
+      updateTranscriptStats();
+    }
+  }
+
+  function triggerDamageAnimation(damage) {
+    arenaContainer.classList.add('shake-arena');
+    setTimeout(() => arenaContainer.classList.remove('shake-arena'), 500);
+
+    const popup = document.createElement('div');
+    popup.className = "damage-popup";
+    popup.textContent = `-${damage} HP!`;
+    damageContainer.appendChild(popup);
+    setTimeout(() => popup.remove(), 1200);
+  }
+
+  function updateHealthUI(hp) {
+    hpNumber.textContent = `${hp} / ${bossMaxHp}`;
+    hpBar.style.width = `${Math.max(0, Math.min(100, (hp / bossMaxHp) * 100))}%`;
+  }
+
+  function triggerVictory() {
+    setTimeout(() => {
+      victoryModal.style.display = 'flex';
+      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+    }, 1500);
+  }
+
+  // Sage Clue Box
+  insertSageTipBtn.addEventListener('click', () => {
+    if (!lastSageWhisperText) return;
+    const prev = transcriptInput.value ? transcriptInput.value.trim() + '\n\n' : '';
+    transcriptInput.value = prev + `To defend this mathematically: ${lastSageWhisperText.trim()}`;
+    updateTranscriptStats();
+  });
+
+  sageSuggestChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      sageQuestionInput.value = chip.dataset.prompt;
+      sageAskForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+    });
+  });
+
+  sageAskForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const question = sageQuestionInput.value.trim();
+    if (!question) return;
+    if (sageTokens <= 0) {
+      alert("No clues left for this battle!");
+      return;
+    }
+
+    sageTokens--;
+    sageTokensText.textContent = sageTokens;
+    setMathText(sageCoachText, "Sage is thinking of a clue...");
+    sageResponseTitle.textContent = "Sage's Clue:";
+
+    try {
+      const res = await fetch("{% url 'voice_tutor:api_oral_defense_sage' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+          assignment_id: assignmentId,
+          round: currentRound,
+          action: 'ask',
+          question: question
+        })
+      });
+      if (!res.ok) throw new Error("Clue retrieval failed");
+      const data = await res.json();
+      lastSageWhisperText = data.text;
+      setMathText(sageCoachText, data.text);
+      insertSageTipBtn.style.display = 'block';
+      sageQuestionInput.value = '';
+    } catch (_) {
+      setMathText(sageCoachText, "Sage couldn't provide a clue right now. Try again!");
+    }
+  });
+
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  const mathJaxScript = document.getElementById('MathJax-script');
+  if (mathJaxScript) {
+    mathJaxScript.addEventListener('load', () => {
+      typesetMath(bossDialogueText, feedbackText, sageCoachText, phaseLabel);
+    });
+  }
+
+  loadIntro();
+});
+</script>
+{% endblock %}

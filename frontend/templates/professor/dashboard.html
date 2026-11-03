@@ -3,265 +3,521 @@
 
 {% block title %}Professor Dashboard — InSync{% endblock %}
 
+{% block dashboard_head %}
+<style>
+  /* Premium Typography Enhancements */
+  .stat-value {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    font-feature-settings: 'tnum' on, 'lnum' on;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.035em;
+  }
+  .stat-label {
+    letter-spacing: -0.01em;
+    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  }
+  .stat-card {
+    background: var(--db-card);
+    border: 1px solid var(--db-card-border);
+    border-radius: 1rem;
+    padding: 1.25rem 1.5rem;
+    transition: box-shadow 0.3s, transform 0.3s;
+  }
+  .stat-card:hover {
+    box-shadow: 0 8px 24px -4px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+  }
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .section-card {
+    background: var(--db-card);
+    border: 1px solid var(--db-card-border);
+    border-radius: 1.125rem;
+    padding: 1.25rem;
+    min-width: 0;
+  }
+  .workspace-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+    align-items: start;
+  }
+  .workspace-panel {
+    min-width: 0;
+  }
+  .workspace-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  .workspace-title {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+  .workspace-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+  .workspace-icon.batches {
+    background: var(--db-blue-light);
+    color: var(--db-blue);
+  }
+  .workspace-icon.assignments {
+    background: var(--db-purple-bg);
+    color: var(--db-purple-text);
+  }
+  .workspace-heading-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .workspace-heading-row h2 {
+    color: var(--db-text);
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.35;
+    margin: 0;
+  }
+  .workspace-count {
+    min-width: 24px;
+    height: 22px;
+    border-radius: 999px;
+    display: inline-grid;
+    place-items: center;
+    padding: 0 7px;
+    background: var(--db-blue-light);
+    color: var(--db-blue);
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+  .workspace-description {
+    color: var(--db-text-secondary);
+    font-size: 0.75rem;
+    line-height: 1.45;
+    margin: 0.15rem 0 0;
+  }
+  .workspace-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex: none;
+    min-height: 34px;
+    padding: 0 0.65rem;
+    border: 1px solid var(--db-card-border);
+    border-radius: 9px;
+    color: var(--db-blue);
+    background: var(--db-card);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: border-color .2s, background .2s, transform .15s;
+  }
+  .workspace-link:hover {
+    border-color: var(--db-blue);
+    background: var(--db-blue-light);
+    transform: translateX(2px);
+  }
+  .workspace-link:focus-visible,
+  .action-card:focus-visible {
+    outline: 3px solid rgba(59, 130, 246, .28);
+    outline-offset: 2px;
+  }
+  .workspace-list {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .action-card {
+    background: var(--db-card);
+    border: 1px solid var(--db-card-border);
+    border-radius: 0.875rem;
+    padding: 1rem;
+    cursor: pointer;
+    transition: border-color .2s, box-shadow .2s, transform .2s;
+    text-align: left;
+    width: 100%;
+    min-height: 158px;
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+  }
+  .action-card:hover {
+    border-color: var(--db-blue);
+    box-shadow: 0 10px 24px -10px rgba(15, 40, 90, .24);
+    transform: translateY(-2px);
+  }
+  .dashboard-item-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+  .dashboard-item-icon {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    background: var(--db-blue-light);
+    color: var(--db-blue);
+    flex: none;
+  }
+  .assignment-item .dashboard-item-icon {
+    background: var(--db-purple-bg);
+    color: var(--db-purple-text);
+  }
+  .dashboard-item-copy {
+    min-width: 0;
+    flex: 1;
+  }
+  .dashboard-item-title {
+    color: var(--db-text);
+    font-size: 0.95rem;
+    font-weight: 650;
+    line-height: 1.4;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .dashboard-item-description {
+    color: var(--db-text-secondary);
+    font-size: 0.75rem;
+    line-height: 1.45;
+    margin: 0.2rem 0 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .dashboard-nav-arrow {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    background: var(--db-blue-light);
+    color: var(--db-blue);
+    flex: none;
+    transition: transform .2s, background .2s;
+  }
+  .action-card:hover .dashboard-nav-arrow {
+    transform: translateX(3px);
+    background: var(--db-blue-light);
+  }
+  .dashboard-item-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: auto;
+    padding-top: 0.9rem;
+  }
+  .dashboard-item-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--db-card-border);
+  }
+  .dashboard-item-footer .student-names {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--db-text-secondary);
+    font-size: 0.72rem;
+  }
+  .badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    white-space: nowrap;
+  }
+  .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--db-blue);
+    border: 2px solid var(--db-card);
+  }
+  .avatar.more {
+    background: var(--db-card-border);
+    color: var(--db-text-secondary);
+    font-size: 0.65rem;
+  }
+  .avatar-stack {
+    display: flex;
+  }
+  .avatar-stack .avatar + .avatar {
+    margin-left: -8px;
+  }
+  .metric {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8rem;
+    color: var(--db-text-secondary);
+  }
+  .metric i {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  .dashboard-empty {
+    min-height: 158px;
+    border: 1px dashed var(--db-card-border);
+    border-radius: 0.875rem;
+    display: grid;
+    place-items: center;
+    padding: 1.5rem;
+    color: var(--db-text-secondary);
+    font-size: 0.8rem;
+    text-align: center;
+  }
+  @media (max-width: 1100px) {
+    .workspace-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 640px) {
+    .section-card {
+      padding: 1rem;
+    }
+    .workspace-header {
+      align-items: center;
+    }
+    .workspace-description {
+      display: none;
+    }
+    .workspace-link span {
+      display: none;
+    }
+    .action-card {
+      min-height: 0;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block inner_content %}
-<div class="p-6 lg:p-8 space-y-8">
+<div class="p-6 lg:p-8 w-full" style="width: 100%;">
+
   <!-- Header -->
-  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
-    <div class="flex-1">
-      <h1 class="font-display text-3xl font-bold mb-1 text-foreground">
-        Welcome back, {{ request.session.user.name }}! 👋
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 class="font-display text-3xl font-bold mb-1" style="color: var(--db-text);">
+        Welcome back, {{ request.session.user.name }}!
       </h1>
-      <p class="text-muted-foreground">
+      <p style="color: var(--db-text-secondary);">
         Here's what's happening with your classes today.
       </p>
     </div>
-    <div class="flex gap-3 flex-wrap justify-start md:justify-end shrink-0 ml-auto">
-      <a 
-        href="{% url 'voice_tutor:professor_assignments' %}" 
-        class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-10 px-4 py-2"
-        style="background-color: #2563eb; color: white; border: none;"
-        onmouseover="this.style.backgroundColor='#1d4ed8'"
-        onmouseout="this.style.backgroundColor='#2563eb'"
-      >
-        <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
-        New Assignment
-      </a>
-    </div>
+    <a
+      href="{% url 'voice_tutor:professor_assignments' %}"
+      class="inline-flex items-center gap-2"
+      style="background: var(--db-blue); color: #fff; padding: 0.625rem 1.5rem; border-radius: 0.75rem; font-size: 0.875rem; font-weight: 600; text-decoration: none; white-space: nowrap; transition: background 0.2s;"
+      onmouseenter="this.style.background='var(--db-blue-hover)'"
+      onmouseleave="this.style.background='var(--db-blue)'"
+    >
+      <i data-lucide="plus" class="w-4 h-4"></i>
+      New Assignment
+    </a>
   </div>
 
   <!-- Stats Grid -->
-  <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+  <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full" style="margin-bottom: 2rem;">
     <!-- Total Students -->
-    <div class="bg-card rounded-2xl p-6 shadow-md hover:shadow-lg transition-all duration-300">
-      <div class="flex items-start justify-between mb-4">
-        <div class="p-3 rounded-xl bg-primary/10 text-primary">
-          <i data-lucide="users" class="w-6 h-6"></i>
+    <div class="stat-card">
+      <div class="flex items-center justify-between mb-3">
+        <span class="stat-label" style="color: var(--db-text-secondary); font-size: 0.875rem; font-weight: 500;">Total Students</span>
+        <div class="stat-icon" style="background: var(--db-blue-light); color: var(--db-blue);">
+          <i data-lucide="users" class="w-5 h-5"></i>
         </div>
-        <span class="text-sm font-medium text-success">+12%</span>
       </div>
-      <h3 class="text-3xl font-display font-bold mb-1">{{ total_students }}</h3>
-      <p class="text-muted-foreground text-sm">Total Students</p>
-      <p class="text-xs text-muted-foreground mt-2">vs last month</p>
+      <h3 class="stat-value font-display" style="font-size: 2.25rem; font-weight: 700; color: var(--db-text); line-height: 1;">{{ total_students }}</h3>
     </div>
 
     <!-- Active Assignments -->
-    <div class="bg-card rounded-2xl p-6 shadow-md hover:shadow-lg transition-all duration-300">
-      <div class="flex items-start justify-between mb-4">
-        <div class="p-3 rounded-xl bg-accent/10 text-accent">
-          <i data-lucide="book-open" class="w-6 h-6"></i>
+    <div class="stat-card">
+      <div class="flex items-center justify-between mb-3">
+        <span class="stat-label" style="color: var(--db-text-secondary); font-size: 0.875rem; font-weight: 500;">Active Assignments</span>
+        <div class="stat-icon" style="background: var(--db-purple-bg); color: var(--db-purple-text);">
+          <i data-lucide="book-open" class="w-5 h-5"></i>
         </div>
-        <span class="text-sm font-medium text-success">+5%</span>
       </div>
-      <h3 class="text-3xl font-display font-bold mb-1">{{ active_assignments_count }}</h3>
-      <p class="text-muted-foreground text-sm">Active Assignments</p>
-      <p class="text-xs text-muted-foreground mt-2">vs last month</p>
+      <h3 class="stat-value font-display" style="font-size: 2.25rem; font-weight: 700; color: var(--db-text); line-height: 1;">{{ active_assignments_count }}</h3>
     </div>
 
     <!-- Engagement Rate -->
-    <div class="bg-card rounded-2xl p-6 shadow-md hover:shadow-lg transition-all duration-300">
-      <div class="flex items-start justify-between mb-4">
-        <div class="p-3 rounded-xl bg-success/10 text-success">
-          <i data-lucide="trending-up" class="w-6 h-6"></i>
+    <div class="stat-card">
+      <div class="flex items-center justify-between mb-3">
+        <span class="stat-label" style="color: var(--db-text-secondary); font-size: 0.875rem; font-weight: 500;">Engagement Rate</span>
+        <div class="stat-icon" style="background: var(--db-green-bg); color: var(--db-green-text);">
+          <i data-lucide="trending-up" class="w-5 h-5"></i>
         </div>
-        <span class="text-sm font-medium text-success">+8%</span>
       </div>
-      <h3 class="text-3xl font-display font-bold mb-1">{{ batch_analytics.overallEngagement }}%</h3>
-      <p class="text-muted-foreground text-sm">Engagement Rate</p>
-      <p class="text-xs text-muted-foreground mt-2">vs last week</p>
+      <h3 class="stat-value font-display" style="font-size: 2.25rem; font-weight: 700; color: var(--db-text); line-height: 1;">{{ batch_analytics.overallEngagement }}%</h3>
     </div>
 
     <!-- Need Attention -->
-    <div class="bg-card rounded-2xl p-6 shadow-md hover:shadow-lg transition-all duration-300">
-      <div class="flex items-start justify-between mb-4">
-        <div class="p-3 rounded-xl bg-warning/10 text-warning">
-          <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+    <div class="stat-card">
+      <div class="flex items-center justify-between mb-3">
+        <span class="stat-label" style="color: var(--db-text-secondary); font-size: 0.875rem; font-weight: 500;">Need Attention</span>
+        <div class="stat-icon" style="background: var(--db-orange-bg); color: var(--db-orange-text);">
+          <i data-lucide="alert-triangle" class="w-5 h-5"></i>
         </div>
       </div>
-      <h3 class="text-3xl font-display font-bold mb-1">{{ batch_analytics.outliers|length }}</h3>
-      <p class="text-muted-foreground text-sm">Need Attention</p>
+      <h3 class="stat-value font-display" style="font-size: 2.25rem; font-weight: 700; color: var(--db-text); line-height: 1;">{{ batch_analytics.outliers|length }}</h3>
     </div>
   </div>
 
-  <!-- Learning Content Section -->
-  <div class="space-y-4">
-    <h2 class="font-display text-xl font-semibold text-foreground">📚 Learning Content</h2>
-    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {% for subject in subjects %}
-        {% for topic in subject.topics %}
-          <a
-            href="{% url 'voice_tutor:topic_page' subject.id topic.id %}"
-            class="bg-card rounded-2xl p-5 shadow-md border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all cursor-pointer group block"
-          >
-            <div class="flex items-center gap-3 mb-3">
-              <div class="p-2 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                <i data-lucide="play" class="w-5 h-5 text-primary"></i>
-              </div>
-              <div>
-                <p class="text-xs text-muted-foreground">{{ subject.name }}</p>
-                <h3 class="font-display font-semibold text-foreground">{{ topic.name }}</h3>
-              </div>
+  <!-- Primary navigation workspaces: Batches + Recent Assignments -->
+  <div class="workspace-grid w-full">
+    <section class="section-card workspace-panel" aria-labelledby="dashboard-batches-title">
+      <header class="workspace-header">
+        <div class="workspace-title">
+          <span class="workspace-icon batches"><i data-lucide="users" class="w-5 h-5"></i></span>
+          <div>
+            <div class="workspace-heading-row">
+              <h2 id="dashboard-batches-title" class="font-display">Your Batches</h2>
+              <span class="workspace-count">{{ batchs|length }}</span>
             </div>
-            <p class="text-sm text-muted-foreground line-clamp-2 leading-relaxed">{{ topic.description }}</p>
-            <div class="flex gap-2 mt-3">
-              <span class="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">{{ topic.videos|length }} videos</span>
-              <span class="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">{{ topic.assignmentQuestions|length }} questions</span>
-            </div>
-          </a>
-        {% endfor %}
-      {% endfor %}
-    </div>
-  </div>
-
-  <!-- Main Content Grid -->
-  <div class="grid lg:grid-cols-3 gap-8">
-    <!-- batchs Section -->
-    <div class="lg:col-span-2 space-y-6">
-      <div class="flex items-center justify-between">
-        <h2 class="font-display text-xl font-semibold text-foreground">Your batchs</h2>
-        <a href="{% url 'voice_tutor:professor_batchs' %}" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-9 px-3">
-          View All
+            <p class="workspace-description">Open a cohort to review students, subjects, and activity.</p>
+          </div>
+        </div>
+        <a href="{% url 'voice_tutor:professor_batchs' %}" class="workspace-link" aria-label="View all batches">
+          <span>View all</span><i data-lucide="arrow-right" class="w-4 h-4"></i>
         </a>
-      </div>
-      <div class="space-y-4">
+      </header>
+
+      <div class="workspace-list">
         {% for batch in batchs %}
-          <button 
-            onclick="location.href='{% url 'voice_tutor:professor_batchs' %}?batch_id={{ batch.id }}'"
-            class="w-full text-left bg-card rounded-2xl p-6 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group"
-          >
-            <div class="flex items-start justify-between mb-4">
-              <div>
-                <h3 class="font-display font-semibold text-lg text-foreground mb-1">{{ batch.name }}</h3>
-                <p class="text-sm text-muted-foreground">{{ batch.description }}</p>
-              </div>
-              <div class="p-2 rounded-lg bg-primary/10 group-hover:bg-primary group-hover:text-primary-foreground transition-colors text-primary">
-                <i data-lucide="chevron-right" class="w-5 h-5"></i>
-              </div>
+        <a href="{% url 'voice_tutor:professor_batch_detail' batch.id %}"
+          class="action-card batch-item"
+          aria-label="Open {{ batch.name }} batch">
+          <div class="dashboard-item-top">
+            <span class="dashboard-item-icon"><i data-lucide="users" class="w-4 h-4"></i></span>
+            <div class="dashboard-item-copy">
+              <h3 class="dashboard-item-title font-display">{{ batch.name }}</h3>
+              <p class="dashboard-item-description">{{ batch.description|default:"View this batch's students and learning activity." }}</p>
             </div>
+            <span class="dashboard-nav-arrow" aria-hidden="true"><i data-lucide="arrow-right" class="w-4 h-4"></i></span>
+          </div>
 
-            <div class="flex gap-6 mt-6">
-              <div class="flex items-center gap-2">
-                <i data-lucide="users" class="w-4 h-4 text-muted-foreground"></i>
-                <span class="text-sm">
-                  <span class="font-semibold text-foreground">{{ batch.studentIds|length }}</span> students
-                </span>
-              </div>
-              <div class="flex items-center gap-2">
-                <i data-lucide="book-open" class="w-4 h-4 text-muted-foreground"></i>
-                <span class="text-sm">
-                  <span class="font-semibold text-foreground">{{ batch.assignmentIds|length }}</span> assignments
-                </span>
-              </div>
-              <div class="flex items-center gap-2">
-                <i data-lucide="trending-up" class="w-4 h-4 text-success"></i>
-                <span class="text-sm">
-                  <span class="font-semibold text-success">74%</span> engaged
-                </span>
-              </div>
+          <div class="dashboard-item-meta">
+            <div class="metric">
+              <i data-lucide="users"></i>
+              <span><span style="font-weight: 700; color: var(--db-text);">{{ batch.studentIds|length }}</span> students</span>
             </div>
+            <div class="metric">
+              <i data-lucide="book-open"></i>
+              <span><span style="font-weight: 700; color: var(--db-text);">{{ batch.assignmentCount }}</span> assignment{{ batch.assignmentCount|pluralize }}</span>
+            </div>
+          </div>
 
-            <!-- Student Avatars -->
-            <div class="flex items-center mt-4 pt-4 border-t border-border">
-              <div class="flex -space-x-2">
-                {% for student in batch.avatar_students %}
-                  <div
-                    class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-semibold border-2 border-card"
-                    style="z-index: {{ forloop.revcounter }};"
-                  >
-                    {{ student.name.0 }}
-                  </div>
-                {% endfor %}
-                {% if batch.remaining_students_count > 0 %}
-                  <div class="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-xs font-semibold border-2 border-card">
-                    +{{ batch.remaining_students_count }}
-                  </div>
-                {% endif %}
-              </div>
-              <span class="ml-3 text-sm text-muted-foreground">
-                {{ batch.students_display_str }}
-              </span>
+          <div class="dashboard-item-footer">
+            <div class="avatar-stack" aria-hidden="true">
+              {% for student in batch.avatar_students %}
+              <span class="avatar" style="z-index: {{ forloop.revcounter }};">{{ student.name.0 }}</span>
+              {% endfor %}
+              {% if batch.remaining_students_count > 0 %}
+              <span class="avatar more">+{{ batch.remaining_students_count }}</span>
+              {% endif %}
             </div>
-          </button>
+            <span class="student-names">{{ batch.students_display_str|default:"No students added yet" }}</span>
+          </div>
+        </a>
+        {% empty %}
+        <div class="dashboard-empty">
+          <span><i data-lucide="users" class="w-5 h-5" style="margin: 0 auto 0.5rem;"></i>No batches yet. Your cohorts will appear here.</span>
+        </div>
         {% endfor %}
       </div>
-    </div>
+    </section>
 
-    <!-- Right Sidebar -->
-    <div class="space-y-6">
-      <!-- Recent Assignments -->
-      <div class="space-y-4">
-        <h2 class="font-display text-xl font-semibold text-foreground">Recent Assignments</h2>
-        <div class="space-y-4">
-          {% for assignment in recent_assignments %}
-            <div 
-              onclick="location.href='{% url 'voice_tutor:professor_assignments' %}'"
-              class="w-full text-left bg-card rounded-2xl p-6 shadow-md border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group cursor-pointer"
-            >
-              <div class="flex items-start justify-between mb-4">
-                <div class="flex-1">
-                  <div class="flex items-center gap-2 mb-2">
-                    <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold {% if assignment.difficulty == 'beginner' %}bg-success/10 text-success border-success/20{% elif assignment.difficulty == 'intermediate' %}bg-warning/10 text-warning border-warning/20{% else %}bg-destructive/10 text-destructive border-destructive/20{% endif %} capitalize">
-                      {{ assignment.difficulty }}
-                    </span>
-                  </div>
-                  <h3 class="font-display font-semibold text-lg text-foreground mb-1">{{ assignment.title }}</h3>
-                  <p class="text-sm text-muted-foreground line-clamp-2 leading-relaxed">{{ assignment.description }}</p>
-                </div>
-                <div class="p-2 rounded-lg bg-primary/10 group-hover:bg-primary group-hover:text-primary-foreground transition-colors text-primary">
-                  <i data-lucide="chevron-right" class="w-5 h-5"></i>
-                </div>
-              </div>
-
-              <div class="flex items-center gap-6 mt-4 pt-4 border-t border-border text-muted-foreground text-sm">
-                <div class="flex items-center gap-2">
-                  <i data-lucide="help-circle" class="w-4 h-4"></i>
-                  <span><span class="font-semibold text-foreground">{{ assignment.questions|length }}</span> questions</span>
-                </div>
-                <div class="flex items-center gap-2">
-                  <i data-lucide="clock" class="w-4 h-4"></i>
-                  <span><span class="font-semibold text-foreground">{{ assignment.expectedDuration }}</span> min</span>
-                </div>
-              </div>
+    <section class="section-card workspace-panel" aria-labelledby="dashboard-assignments-title">
+      <header class="workspace-header">
+        <div class="workspace-title">
+          <span class="workspace-icon assignments"><i data-lucide="book-open" class="w-5 h-5"></i></span>
+          <div>
+            <div class="workspace-heading-row">
+              <h2 id="dashboard-assignments-title" class="font-display">Recent Assignments</h2>
+              <span class="workspace-count">{{ recent_assignments|length }}</span>
             </div>
-          {% endfor %}
+            <p class="workspace-description">Continue editing or review your latest assessments.</p>
+          </div>
         </div>
-      </div>
+        <a href="{% url 'voice_tutor:professor_assignments' %}" class="workspace-link" aria-label="View all assignments">
+          <span>View all</span><i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </a>
+      </header>
 
-      <!-- Quick Insights -->
-      <div class="bg-card rounded-2xl p-6 shadow-md border border-border/50">
-        <h3 class="font-display font-semibold mb-4 text-foreground">Quick Insights</h3>
-        <div class="space-y-4">
-          <div class="p-4 rounded-xl bg-warning/10 border border-warning/20">
-            <h4 class="font-medium text-sm text-foreground mb-1">Common Weak Concepts</h4>
-            <div class="flex flex-wrap gap-2 mt-2">
-              {% for concept in batch_analytics.commonWeakConcepts %}
-                <span class="px-2 py-1 text-xs rounded-full bg-warning/20 text-warning font-medium">
-                  {{ concept }}
+      <div class="workspace-list">
+        {% for assignment in recent_assignments %}
+        <a href="{% url 'voice_tutor:professor_assignment_detail' assignment.id %}"
+          class="action-card assignment-item"
+          aria-label="Open assignment {{ assignment.title }}">
+          <div class="dashboard-item-top">
+            <span class="dashboard-item-icon"><i data-lucide="book-open" class="w-4 h-4"></i></span>
+            <div class="dashboard-item-copy">
+              <div style="margin-bottom: 0.4rem;">
+                <span class="badge"
+                  style="{% if assignment.difficulty == 'beginner' %}background: var(--db-green-bg); color: var(--db-green-text);{% elif assignment.difficulty == 'intermediate' %}background: var(--db-orange-bg); color: var(--db-orange-text);{% else %}background: var(--db-red-bg); color: var(--db-red-text);{% endif %}">
+                  {{ assignment.difficulty }}
                 </span>
-              {% endfor %}
+              </div>
+              <h3 class="dashboard-item-title font-display">{{ assignment.title }}</h3>
+              <p class="dashboard-item-description">{{ assignment.description|default:"Open this assignment to review questions and student activity." }}</p>
             </div>
+            <span class="dashboard-nav-arrow" aria-hidden="true"><i data-lucide="arrow-right" class="w-4 h-4"></i></span>
           </div>
 
-          <div class="p-4 rounded-xl bg-primary/10 border border-primary/20">
-            <h4 class="font-medium text-sm text-foreground mb-2">Performance Distribution</h4>
-            <div class="flex gap-4 text-sm">
-              <div>
-                <span class="text-success font-semibold">{{ batch_analytics.performanceDistribution.high }}</span>
-                <span class="text-muted-foreground ml-1">High</span>
-              </div>
-              <div>
-                <span class="text-warning font-semibold">{{ batch_analytics.performanceDistribution.medium }}</span>
-                <span class="text-muted-foreground ml-1">Medium</span>
-              </div>
-              <div>
-                <span class="text-destructive font-semibold">{{ batch_analytics.performanceDistribution.low }}</span>
-                <span class="text-muted-foreground ml-1">Low</span>
-              </div>
+          <div class="dashboard-item-meta" style="border-top: 1px solid var(--db-card-border);">
+            <div class="metric">
+              <i data-lucide="help-circle"></i>
+              <span><span style="font-weight: 700; color: var(--db-text);">{{ assignment.questionCount }}</span> question{{ assignment.questionCount|pluralize }}</span>
+            </div>
+            <div class="metric">
+              <i data-lucide="clock"></i>
+              <span><span style="font-weight: 700; color: var(--db-text);">{{ assignment.expectedDuration }}</span> min</span>
             </div>
           </div>
+        </a>
+        {% empty %}
+        <div class="dashboard-empty">
+          <span><i data-lucide="book-open" class="w-5 h-5" style="margin: 0 auto 0.5rem;"></i>No assignments yet. Create one to get started.</span>
         </div>
+        {% endfor %}
       </div>
-    </div>
+    </section>
   </div>
+
 </div>
 {% endblock %}
-

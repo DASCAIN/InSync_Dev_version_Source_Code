@@ -1,1 +1,1 @@
-web: gunicorn insync_backend.wsgi:application --log-file -
+web: gunicorn insync_backend.asgi:application -k uvicorn.workers.UvicornWorker --timeout 600 --workers 2

@@ -1,0 +1,501 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Messages — InSync{% endblock %}
+
+{% block head_extra %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/professor.css' %}?v=1.2" />
+<style>
+  .messages-layout {
+    display: flex;
+    height: 100vh;
+    background-color: var(--prof-bg);
+    overflow: hidden;
+  }
+  @media (max-width: 1024px) {
+    .messages-layout {
+      height: calc(100vh - 4rem);
+    }
+  }
+  .messages-sidebar {
+    width: 22rem;
+    border-right: 1px solid var(--prof-border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    background-color: var(--prof-card-bg);
+  }
+  .messages-search-bar {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--prof-border);
+    height: 4.75rem; /* align with chat header */
+    display: flex;
+    align-items: center;
+  }
+  .messages-search-input {
+    width: 100%;
+    height: 2.5rem;
+    border-radius: var(--prof-radius-md);
+    border: 1px solid var(--prof-border);
+    background-color: var(--prof-bg);
+    padding: 0.5rem 0.75rem 0.5rem 2.5rem;
+    font-size: 0.875rem;
+    outline: none;
+    transition: var(--prof-transition);
+  }
+  .messages-search-input:focus {
+    border-color: var(--prof-primary);
+    box-shadow: 0 0 0 2px var(--prof-primary-light);
+  }
+  .student-list {
+    flex: 1;
+    overflow-y: auto;
+  }
+  .student-item {
+    width: 100%;
+    text-align: left;
+    padding: 1rem;
+    border-bottom: 1px solid var(--prof-border);
+    background: none;
+    border-left: 2px solid transparent;
+    cursor: pointer;
+    transition: var(--prof-transition);
+  }
+  .student-item:hover {
+    background-color: var(--prof-bg);
+  }
+  .student-item.active {
+    background-color: rgba(99, 102, 241, 0.05);
+    border-left-color: var(--prof-primary);
+  }
+  .student-item-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .student-item-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--prof-radius-full);
+    background-color: rgba(67, 56, 202, 0.1);
+    color: var(--prof-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .student-item-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .student-item-name {
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--prof-text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .student-item-preview {
+    font-size: 0.75rem;
+    color: var(--prof-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .chat-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--prof-bg);
+  }
+  .chat-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--prof-border);
+    background-color: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    z-index: 10;
+    height: 4.75rem; /* match search bar height */
+  }
+  .messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .chat-input-area {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--prof-border);
+    background-color: var(--prof-card-bg);
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+  }
+  .chat-textarea {
+    flex: 1;
+    min-height: 3rem;
+    max-height: 8rem;
+    border-radius: 1.5rem;
+    border: 1px solid var(--prof-border);
+    background-color: var(--prof-bg);
+    padding: 0.75rem 1.25rem;
+    font-size: 0.875rem;
+    outline: none;
+    resize: none;
+    font-family: inherit;
+    transition: var(--prof-transition);
+    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);
+  }
+  .chat-textarea:focus {
+    border-color: var(--prof-primary);
+    box-shadow: 0 0 0 2px var(--prof-primary-light);
+  }
+  .msg-bubble-wrapper {
+    display: flex;
+  }
+  .msg-bubble-wrapper.own {
+    justify-content: flex-end;
+  }
+  .msg-bubble-wrapper.other {
+    justify-content: flex-start;
+  }
+  .msg-bubble {
+    max-width: 70%;
+    padding: 0.875rem 1.25rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    transition: transform 0.2s ease;
+  }
+  .msg-bubble:hover {
+    transform: translateY(-1px);
+  }
+  .msg-bubble.own {
+    background: linear-gradient(135deg, #6366f1, #4338ca);
+    color: white;
+    border-radius: 1.25rem 1.25rem 0.25rem 1.25rem;
+  }
+  .msg-bubble.other {
+    background: white;
+    color: var(--prof-text-main);
+    border: 1px solid var(--prof-border);
+    border-radius: 1.25rem 1.25rem 1.25rem 0.25rem;
+  }
+  .msg-text {
+    font-size: 0.875rem;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .msg-time {
+    font-size: 0.6875rem;
+    margin-top: 0.375rem;
+    text-align: right;
+  }
+  .msg-bubble.own .msg-time {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  .msg-bubble.other .msg-time {
+    color: var(--prof-text-muted);
+  }
+
+  /* Dark mode overrides */
+  html.dark .messages-layout {
+    background-color: var(--db-bg, hsl(222, 47%, 8%));
+  }
+  html.dark .messages-sidebar {
+    background-color: var(--db-card, hsl(222, 40%, 13%));
+    border-color: var(--db-card-border, hsl(222, 30%, 20%));
+  }
+  html.dark .messages-search-bar {
+    border-color: var(--db-card-border, hsl(222, 30%, 20%));
+  }
+  html.dark .messages-search-input {
+    background-color: var(--db-bg, hsl(222, 47%, 8%));
+    border-color: var(--db-card-border, hsl(222, 30%, 20%));
+    color: var(--db-text, hsl(210, 40%, 92%));
+  }
+  html.dark .student-item {
+    border-color: var(--db-card-border, hsl(222, 30%, 20%));
+  }
+  html.dark .student-item:hover {
+    background-color: var(--db-sidebar-hover-bg, hsl(217, 40%, 18%));
+  }
+  html.dark .student-item.active {
+    background-color: var(--db-sidebar-hover-bg, hsl(217, 40%, 18%));
+    border-left-color: var(--db-blue, hsl(217, 91%, 60%));
+  }
+  html.dark .student-item-name {
+    color: var(--db-text, hsl(210, 40%, 92%));
+  }
+  html.dark .student-item-preview {
+    color: var(--db-text-secondary, hsl(215, 20%, 55%));
+  }
+  html.dark .chat-pane {
+    background-color: var(--db-bg, hsl(222, 47%, 8%));
+  }
+  html.dark .chat-header {
+    background-color: var(--db-card, hsl(222, 40%, 13%));
+    border-color: var(--db-card-border, hsl(222, 30%, 20%));
+  }
+  html.dark .chat-header p:first-child {
+    color: var(--db-text, hsl(210, 40%, 92%)) !important;
+  }
+  html.dark .chat-input-area {
+    background-color: var(--db-card, hsl(222, 40%, 13%));
+    border-color: var(--db-card-border, hsl(222, 30%, 20%));
+  }
+  html.dark .chat-textarea {
+    background-color: var(--db-bg, hsl(222, 47%, 8%));
+    border-color: var(--db-card-border, hsl(222, 30%, 20%));
+    color: var(--db-text, hsl(210, 40%, 92%));
+  }
+  html.dark .msg-bubble.other {
+    background-color: var(--db-card, hsl(222, 40%, 13%));
+    border-color: var(--db-card-border, hsl(222, 30%, 20%));
+    color: var(--db-text, hsl(210, 40%, 92%));
+  }
+</style>
+{% endblock %}
+
+{% block inner_content %}
+<div class="prof-scope">
+  <div class="messages-layout">
+    <!-- Student List (Left sidebar) -->
+      <div class="messages-sidebar">
+        <div class="messages-search-bar">
+          <div style="position: relative;">
+            <i data-lucide="search" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 1rem; height: 1rem; color: var(--prof-text-muted);"></i>
+            <input 
+              id="student-search"
+              placeholder="Search professors..." 
+              oninput="searchStudents()"
+              class="messages-search-input"
+            />
+          </div>
+        </div>
+        
+        <div class="student-list" id="student-list">
+          {% for student in students %}
+            <button
+              id="student-tab-{{ student.id }}"
+              onclick="selectStudent('{{ student.id }}')"
+              class="student-item"
+              data-name="{{ student.name }}"
+            >
+              <div class="student-item-content">
+                <div class="student-item-avatar">
+                  {{ student.name.0 }}
+                </div>
+                <div class="student-item-info">
+                  <p class="student-item-name">{{ student.name }}</p>
+                  <p class="student-item-preview" id="student-last-msg-{{ student.id }}">No messages yet</p>
+                </div>
+              </div>
+            </button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Chat Area (Right pane) -->
+      <div class="chat-pane" id="chat-pane-active" style="display: none;">
+        <!-- Active student profile header -->
+        <div class="chat-header">
+          <div class="student-item-avatar" id="header-avatar" style="background-color: var(--prof-primary-light);">
+            S
+          </div>
+          <div>
+            <p style="font-weight: 500; font-size: 0.875rem; color: var(--prof-text-main);" id="header-name">Professor Name</p>
+            <p style="font-size: 0.75rem; color: var(--prof-text-muted);" id="header-email">professor@university.edu</p>
+          </div>
+        </div>
+
+        <!-- Messages container -->
+        <div class="messages-container" id="messages-container">
+          <!-- Messages list appended dynamically via JS -->
+        </div>
+
+        <!-- Text input bar -->
+        <div class="chat-input-area">
+          <textarea
+            id="new-msg-text"
+            placeholder="Type a message..."
+            class="chat-textarea"
+            rows="1"
+            onkeydown="handleMsgInputKey(event)"
+          ></textarea>
+          <button 
+            onclick="sendNewMessage()"
+            class="prof-btn-primary"
+            style="width: 3rem; height: 3rem; border-radius: 50%; padding: 0; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: linear-gradient(135deg, #6366f1, #4338ca); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); transition: transform 0.2s ease, box-shadow 0.2s ease;"
+            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(99, 102, 241, 0.4)';"
+            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(99, 102, 241, 0.3)';"
+          >
+            <i data-lucide="send" style="width: 1.25rem; height: 1.25rem; margin: 0; margin-left: -2px;"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Empty Chat Area -->
+      <div class="chat-pane" id="chat-pane-empty" style="align-items: center; justify-content: center;">
+        <div style="text-align: center;">
+          <i data-lucide="message-square" style="width: 3rem; height: 3rem; color: var(--prof-text-light); margin: 0 auto 1rem auto; display: block; opacity: 0.5;"></i>
+          <p class="prof-stat-label">Select a professor to start messaging</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block dashboard_scripts %}
+<script>
+  const studentData = {
+    {% for s in students %}
+      "{{ s.id }}": {
+        name: "{{ s.name }}",
+        email: "{{ s.email }}"
+      },
+    {% endfor %}
+  };
+
+  const dummyMessages = {};
+
+  let selectedStudentId = null;
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const firstId = Object.keys(studentData)[0] || null;
+    selectStudent(firstId);
+    
+    Object.keys(studentData).forEach(id => {
+      const msgs = dummyMessages[id] || [];
+      const last = msgs[msgs.length - 1];
+      const previewEl = document.getElementById(`student-last-msg-${id}`);
+      if (previewEl && last) {
+        previewEl.textContent = last.text;
+      }
+    });
+  });
+
+  function selectStudent(studentId) {
+    if (!studentId) {
+      document.getElementById('chat-pane-active').style.display = 'none';
+      document.getElementById('chat-pane-empty').style.display = 'flex';
+      return;
+    }
+
+    selectedStudentId = studentId;
+    document.getElementById('chat-pane-active').style.display = 'flex';
+    document.getElementById('chat-pane-empty').style.display = 'none';
+
+    document.querySelectorAll('.student-item').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    const activeBtn = document.getElementById(`student-tab-${studentId}`);
+    if (activeBtn) {
+      activeBtn.classList.add('active');
+    }
+
+    const stud = studentData[studentId];
+    document.getElementById('header-name').textContent = stud.name;
+    document.getElementById('header-email').textContent = stud.email;
+    document.getElementById('header-avatar').textContent = stud.name.charAt(0);
+
+    renderMessages();
+  }
+
+  function renderMessages() {
+    const container = document.getElementById('messages-container');
+    container.innerHTML = '';
+    const msgs = dummyMessages[selectedStudentId] || [];
+
+    if (msgs.length === 0) {
+      container.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--prof-text-muted); font-size: 0.875rem;">
+          <p>No messages yet. Start a conversation!</p>
+        </div>
+      `;
+      return;
+    }
+
+    msgs.forEach(msg => {
+      const wrapper = document.createElement('div');
+      wrapper.className = `msg-bubble-wrapper ${msg.isOwn ? 'own' : 'other'}`;
+
+      const bubble = document.createElement('div');
+      bubble.className = `msg-bubble ${msg.isOwn ? 'own' : 'other'}`;
+
+      const text = document.createElement('p');
+      text.className = "msg-text";
+      text.textContent = msg.text;
+
+      const time = document.createElement('p');
+      time.className = "msg-time";
+      time.textContent = msg.time;
+
+      bubble.appendChild(text);
+      bubble.appendChild(time);
+      wrapper.appendChild(bubble);
+      container.appendChild(wrapper);
+    });
+
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function sendNewMessage() {
+    const input = document.getElementById('new-msg-text');
+    const trimmed = input.value.trim();
+    if (!trimmed || !selectedStudentId) return;
+
+    const msgs = dummyMessages[selectedStudentId] || [];
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    const newMsg = {
+      id: `${Date.now()}`,
+      from: 'You',
+      text: trimmed,
+      time: timeStr,
+      isOwn: true
+    };
+    
+    msgs.push(newMsg);
+    dummyMessages[selectedStudentId] = msgs;
+    
+    const previewEl = document.getElementById(`student-last-msg-${selectedStudentId}`);
+    if (previewEl) {
+      previewEl.textContent = trimmed;
+    }
+
+    input.value = '';
+    renderMessages();
+  }
+
+  function handleMsgInputKey(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      sendNewMessage();
+    }
+  }
+
+  function searchStudents() {
+    const query = document.getElementById('student-search').value.toLowerCase();
+    const items = document.querySelectorAll('.student-item');
+    
+    items.forEach(item => {
+      const name = item.getAttribute('data-name').toLowerCase();
+      if (name.includes(query)) {
+        item.style.display = 'block';
+      } else {
+        item.style.display = 'none';
+      }
+    });
+  }
+</script>
+{% endblock %}

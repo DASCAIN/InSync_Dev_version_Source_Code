@@ -4,6 +4,41 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Immediate Anti-FOUC Theme Script (Executes synchronously before HTML rendering to eliminate white flashes) -->
+    <script>
+      (function() {
+        try {
+          var d = localStorage.getItem('darkMode');
+          var idm = localStorage.getItem('insync-dark-mode');
+          var isDark = d === 'true' || idm === '1';
+          if (d === null && idm === null) {
+            isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          }
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.setAttribute('data-theme', 'dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.setAttribute('data-theme', 'light');
+          }
+        } catch (_) {}
+      })();
+    </script>
+    <style>
+      /* Ensure root and canvas render dark immediately before external stylesheets finish parsing */
+      html.dark {
+        background-color: hsl(222, 47%, 8%) !important;
+        color-scheme: dark;
+      }
+      html.dark body {
+        background-color: hsl(222, 47%, 8%) !important;
+        color: hsl(210, 40%, 92%) !important;
+      }
+      html:not(.dark) {
+        background-color: #F8FAFC;
+        color-scheme: light;
+      }
+    </style>
     <title>{% block title %}InSync by DASCAIN{% endblock %}</title>
     <meta name="description" content="InSync by DASCAIN — AI-powered teaching intelligence that helps professors understand how students think." />
     <meta name="author" content="DASCAIN" />
@@ -23,6 +58,11 @@
     <meta name="twitter:title" content="InSync by DASCAIN" />
     <meta name="twitter:description" content="AI-powered teaching intelligence that helps professors understand how students think—not just what they answer." />
     <meta name="twitter:image" content="https://insync.dascain.com/insync-logo.png" />
+
+    <!-- Premium Fonts: Plus Jakarta Sans & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
 
     <!-- Compiled CSS Stylesheet -->
     <link rel="stylesheet" href="{% static 'css/index.css' %}?v=1.1" />
